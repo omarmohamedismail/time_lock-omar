@@ -1,142 +1,103 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Countdown Lock Screen</title>
   <style>
     body {
-      margin: 0;
-      height: 100vh;
-      width: 100vw;
-      background: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      color: white;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      user-select: none;
-      overflow: hidden;
-      text-align: center;
+      margin: 0; height: 100vh; width: 100vw; background: #000;
+      display: flex; justify-content: center; align-items: center; flex-direction: column;
+      color: #fff; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none; overflow: hidden; text-align: center;
     }
-
     .setup-box {
       background: rgba(255,255,255,0.08);
-      padding: 20px 30px;
-      border-radius: 16px;
+      padding: 20px 30px; border-radius: 16px;
       box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+      max-width: 520px; width: 92%;
     }
-
-    .inputs {
-      display: flex;
-      gap: 15px;
-      justify-content: center;
-      margin: 15px 0;
-    }
-
-    .inputs label {
-      font-size: 16px;
-      margin-bottom: 8px;
-      display: block;
-    }
-
+    .inputs { display: flex; gap: 15px; justify-content: center; margin: 15px 0; flex-wrap: wrap; }
+    .inputs label { font-size: 15px; margin-bottom: 6px; display: block; }
     input, button {
-      padding: 10px;
-      font-size: 18px;
-      border: none;
-      border-radius: 10px;
-      outline: none;
+      padding: 10px; font-size: 18px; border: none; border-radius: 10px; outline: none;
     }
-
-    input[type="number"] {
-      width: 80px;
-      text-align: center;
-    }
-
-    input[type="color"] {
-      cursor: pointer;
-    }
-
-    button {
-      background: #4CAF50;
-      color: white;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    button:hover {
-      background: #45a049;
-    }
-
-    .time {
-      font-size: 12vw;
-      font-weight: bold;
-      margin-bottom: 20px;
-      letter-spacing: 5px;
-    }
-
-    .hint {
-      font-size: 4vw;
-      opacity: 0.7;
+    input[type="number"] { width: 90px; text-align: center; }
+    input[type="color"] { cursor: pointer; height: 44px; width: 80px; border-radius: 10px; }
+    button { background: #4CAF50; color: #fff; cursor: pointer; transition: .25s; }
+    button:hover { background: #45a049; }
+    .time { font-size: 12vw; font-weight: 700; margin-bottom: 18px; letter-spacing: 4px; line-height: 1; }
+    .hint { font-size: 4.5vw; opacity: .75; }
+    @media (min-width: 768px) {
+      .time { font-size: 120px; }
+      .hint { font-size: 22px; }
     }
   </style>
 </head>
 <body>
   <div class="setup-box" id="setup">
-    <label>⏰ اختر الوقت:</label>
+    <div style="font-weight:600; margin-bottom:8px;">⏰ اختر الوقت:</div>
     <div class="inputs">
       <div>
         <label>ساعات</label>
-        <input type="number" id="hoursInput" value="0" min="0">
+        <input type="number" id="hoursInput" value="0" min="0" />
       </div>
       <div>
         <label>دقائق</label>
-        <input type="number" id="minutesInput" value="5" min="0" max="59">
+        <input type="number" id="minutesInput" value="5" min="0" max="59" />
+      </div>
+      <div>
+        <label>لون الخلفية</label>
+        <input type="color" id="bgColor" value="#000000" />
       </div>
     </div>
-
-    <label>🎨 اختر لون الخلفية:</label>
-    <input type="color" id="bgColor" value="#000000">
-    <br><br>
-    <button onclick="startCountdown()">ابدأ</button>
+    <button id="startBtn" onclick="startCountdown()">ابدأ</button>
   </div>
 
-  <div class="time" id="time" style="display:none;"></div>
+  <div class="time" id="time" style="display:none;">00:00:00</div>
   <div class="hint" id="hint" style="display:none;">اضغط على المسطرة للخروج</div>
 
   <script>
-    let countdown;
-    let interval;
+    let countdown = 0;
+    let interval = null;
+    let audioCtx = null; // سننشئه عند الضغط على "ابدأ" (إيماءة مستخدم)
 
     function startCountdown() {
-      let hours = parseInt(document.getElementById('hoursInput').value) || 0;
-      let minutes = parseInt(document.getElementById('minutesInput').value) || 0;
+      const hours = Math.max(0, parseInt(document.getElementById('hoursInput').value) || 0);
+      const minutesRaw = parseInt(document.getElementById('minutesInput').value) || 0;
+      const minutes = Math.max(0, Math.min(59, minutesRaw));
 
       countdown = (hours * 3600) + (minutes * 60);
       if (countdown <= 0) return;
 
-      // تغيير الخلفية
-      let bg = document.getElementById('bgColor').value;
-      document.body.style.background = bg;
+      // إنشاء AudioContext مرة واحدة بعد إيماءة المستخدم (للسماح بالتشغيل لاحقاً)
+      if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+      }
 
-      // إخفاء الإعدادات وبدء العداد
+      // تغيير الخلفية
+      document.body.style.background = document.getElementById('bgColor').value;
+
+      // إخفاء الإعدادات وإظهار العداد
       document.getElementById('setup').style.display = "none";
       document.getElementById('time').style.display = "block";
       document.getElementById('hint').style.display = "block";
 
-      updateCountdown();
-      interval = setInterval(updateCountdown, 1000);
-
+      // ملء الشاشة (داخل حدث زر لتسمح به المتصفحات)
       if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen();
+        document.documentElement.requestFullscreen().catch(()=>{});
       }
+
+      updateCountdown();
+      clearInterval(interval);
+      interval = setInterval(updateCountdown, 1000);
     }
 
     function updateCountdown() {
-      let h = Math.floor(countdown / 3600);
-      let m = Math.floor((countdown % 3600) / 60);
-      let s = countdown % 60;
+      const h = Math.floor(countdown / 3600);
+      const m = Math.floor((countdown % 3600) / 60);
+      const s = countdown % 60;
 
       document.getElementById('time').textContent =
         String(h).padStart(2, '0') + ":" +
@@ -148,14 +109,48 @@
       } else {
         clearInterval(interval);
         document.getElementById('time').textContent = "00:00:00";
+        ringAlarm(); // 🔔 شغّل الجرس عند الانتهاء
       }
     }
 
+    // 🔔 تنبيه صوتي بدون ملفات خارجية (3 صفارات قصيرة)
+    function ringAlarm() {
+      // اهتزاز للموبايل إن كان مدعوم
+      if (navigator.vibrate) navigator.vibrate([200, 120, 200]);
+
+      if (!audioCtx) return; // متصفح لا يدعم/لم يُنشأ
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const now = audioCtx.currentTime;
+
+      // وظيفة توليد نغمة قصيرة
+      const beep = (freq, start, dur) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        // هجوم سريع ثم خفض تدريجي للصوت
+        gain.gain.setValueAtTime(0.0001, now + start);
+        gain.gain.exponentialRampToValueAtTime(0.35, now + start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+
+        osc.start(now + start);
+        osc.stop(now + start + dur);
+      };
+
+      // ثلاث صفارات: تردد 880Hz
+      beep(880, 0.00, 0.28);
+      beep(880, 0.45, 0.28);
+      beep(880, 0.90, 0.45);
+    }
+
+    // الخروج فقط عند الضغط على المسطرة
     document.addEventListener('keydown', function(e) {
       if (e.code === "Space") {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
+        if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
         window.close();
       }
     });
