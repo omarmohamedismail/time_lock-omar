@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Countdown Lock Screen</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      width: 100vw;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: white;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .setup-box {
+      background: rgba(255,255,255,0.08);
+      padding: 20px 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    }
+
+    .inputs {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin: 15px 0;
+    }
+
+    .inputs label {
+      font-size: 16px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      text-align: center;
+    }
+
+    input[type="color"] {
+      cursor: pointer;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    .time {
+      font-size: 12vw;
+      font-weight: bold;
+      margin-bottom: 20px;
+      letter-spacing: 5px;
+    }
+
+    .hint {
+      font-size: 4vw;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-box" id="setup">
+    <label>⏰ اختر الوقت:</label>
+    <div class="inputs">
+      <div>
+        <label>ساعات</label>
+        <input type="number" id="hoursInput" value="0" min="0">
+      </div>
+      <div>
+        <label>دقائق</label>
+        <input type="number" id="minutesInput" value="5" min="0" max="59">
+      </div>
+    </div>
+
+    <label>🎨 اختر لون الخلفية:</label>
+    <input type="color" id="bgColor" value="#000000">
+    <br><br>
+    <button onclick="startCountdown()">ابدأ</button>
+  </div>
+
+  <div class="time" id="time" style="display:none;"></div>
+  <div class="hint" id="hint" style="display:none;">اضغط على المسطرة للخروج</div>
+
+  <script>
+    let countdown;
+    let interval;
+
+    function startCountdown() {
+      let hours = parseInt(document.getElementById('hoursInput').value) || 0;
+      let minutes = parseInt(document.getElementById('minutesInput').value) || 0;
+
+      countdown = (hours * 3600) + (minutes * 60);
+      if (countdown <= 0) return;
+
+      // تغيير الخلفية
+      let bg = document.getElementById('bgColor').value;
+      document.body.style.background = bg;
+
+      // إخفاء الإعدادات وبدء العداد
+      document.getElementById('setup').style.display = "none";
+      document.getElementById('time').style.display = "block";
+      document.getElementById('hint').style.display = "block";
+
+      updateCountdown();
+      interval = setInterval(updateCountdown, 1000);
+
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      }
+    }
+
+    function updateCountdown() {
+      let h = Math.floor(countdown / 3600);
+      let m = Math.floor((countdown % 3600) / 60);
+      let s = countdown % 60;
+
+      document.getElementById('time').textContent =
+        String(h).padStart(2, '0') + ":" +
+        String(m).padStart(2, '0') + ":" +
+        String(s).padStart(2, '0');
+
+      if (countdown > 0) {
+        countdown--;
+      } else {
+        clearInterval(interval);
+        document.getElementById('time').textContent = "00:00:00";
+      }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.code === "Space") {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+        window.close();
+      }
+    });
+  </script>
+</body>
+</html>
