@@ -29,10 +29,12 @@
     .time { font-size: 12vw; font-weight: 700; margin-bottom: 18px; letter-spacing: 4px; line-height: 1; }
     .hint { font-size: 4.5vw; opacity: .75; margin-bottom: 10px; }
     .quote { font-size: 3.5vw; opacity: .8; font-style: italic; max-width: 90%; line-height: 1.5; }
+    .error { color: #ffb3b3; margin-top: 8px; font-size: 14px; display:none; }
     @media (min-width: 768px) {
       .time { font-size: 120px; }
       .hint { font-size: 22px; }
       .quote { font-size: 20px; }
+      .error { font-size: 15px; }
     }
   </style>
 </head>
@@ -42,11 +44,11 @@
     <div class="inputs">
       <div>
         <label>ساعات</label>
-        <input type="number" id="hoursInput" value="0" min="0" />
+        <input type="number" id="hoursInput" value="0" min="0" inputmode="numeric" pattern="[0-9]*"/>
       </div>
       <div>
         <label>دقائق</label>
-        <input type="number" id="minutesInput" value="5" min="0" max="59" />
+        <input type="number" id="minutesInput" value="5" min="0" max="59" inputmode="numeric" pattern="[0-9]*"/>
       </div>
       <div>
         <label>لون الخلفية</label>
@@ -54,6 +56,7 @@
       </div>
     </div>
     <button id="startBtn" onclick="startCountdown()">ابدأ</button>
+    <div class="error" id="errMsg">من فضلك أدخل وقتًا أكبر من صفر (مثال: 0 ساعة و 3 دقائق).</div>
   </div>
 
   <div class="time" id="time" style="display:none;">00:00:00</div>
@@ -64,6 +67,24 @@
     let countdown = 0;
     let interval = null;
     let audioCtx = null;
+
+    // ✅ دعم الأرقام العربية والهندية: تحويلها لـ ASCII قبل التحويل لأرقام
+    function toAsciiDigits(str) {
+      if (typeof str !== 'string') return str;
+      return str
+        // العربية (٠١٢٣٤٥٦٧٨٩)
+        .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
+        // الفارسية/الأردية (۰۱۲۳۴۵۶۷۸۹)
+        .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776));
+    }
+    function toIntSafe(el, clampMax = null) {
+      const raw = toAsciiDigits(el.value || "");
+      let n = parseInt(raw, 10);
+      if (isNaN(n)) n = 0;
+      if (n < 0) n = 0;
+      if (clampMax !== null && n > clampMax) n = clampMax;
+      return n;
+    }
 
     // 📜 30 حكمة لطلبة الثانوية العامة
     const quotes = [
@@ -100,12 +121,18 @@
     ];
 
     function startCountdown() {
-      const hours = Math.max(0, parseInt(document.getElementById('hoursInput').value) || 0);
-      const minutesRaw = parseInt(document.getElementById('minutesInput').value) || 0;
-      const minutes = Math.max(0, Math.min(59, minutesRaw));
+      // اخفاء رسالة الخطأ إن ظهرت
+      const err = document.getElementById('errMsg');
+      err.style.display = 'none';
+
+      const hours = toIntSafe(document.getElementById('hoursInput'));
+      const minutes = toIntSafe(document.getElementById('minutesInput'), 59);
 
       countdown = (hours * 3600) + (minutes * 60);
-      if (countdown <= 0) return;
+      if (countdown <= 0) {
+        err.style.display = 'block';
+        return;
+      }
 
       if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
         const AC = window.AudioContext || window.webkitAudioContext;
