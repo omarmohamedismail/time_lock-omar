@@ -27,10 +27,12 @@
     button { background: #4CAF50; color: #fff; cursor: pointer; transition: .25s; }
     button:hover { background: #45a049; }
     .time { font-size: 12vw; font-weight: 700; margin-bottom: 18px; letter-spacing: 4px; line-height: 1; }
-    .hint { font-size: 4.5vw; opacity: .75; }
+    .hint { font-size: 4.5vw; opacity: .75; margin-bottom: 10px; }
+    .quote { font-size: 3.5vw; opacity: .8; font-style: italic; max-width: 90%; line-height: 1.5; }
     @media (min-width: 768px) {
       .time { font-size: 120px; }
       .hint { font-size: 22px; }
+      .quote { font-size: 20px; }
     }
   </style>
 </head>
@@ -56,11 +58,46 @@
 
   <div class="time" id="time" style="display:none;">00:00:00</div>
   <div class="hint" id="hint" style="display:none;">اضغط على المسطرة للخروج</div>
+  <div class="quote" id="quote" style="display:none;"></div>
 
   <script>
     let countdown = 0;
     let interval = null;
-    let audioCtx = null; // سننشئه عند الضغط على "ابدأ" (إيماءة مستخدم)
+    let audioCtx = null;
+
+    // 📜 30 حكمة لطلبة الثانوية العامة
+    const quotes = [
+      "من جدّ وجد، ومن زرع حصد.",
+      "الوقت كالسيف إن لم تقطعه قطعك.",
+      "اطلب العلم من المهد إلى اللحد.",
+      "اعمل لدنياك كأنك تعيش أبداً، واعمل لآخرتك كأنك تموت غداً.",
+      "لا تؤجل عمل اليوم إلى الغد.",
+      "الصديق وقت الضيق.",
+      "الحكمة ضالة المؤمن.",
+      "القناعة كنز لا يفنى.",
+      "درهم وقاية خير من قنطار علاج.",
+      "في التأني السلامة وفي العجلة الندامة.",
+      "إذا تم العقل نقص الكلام.",
+      "لا حياة مع اليأس، ولا يأس مع الحياة.",
+      "افعل الخير تجده.",
+      "الكلمة الطيبة صدقة.",
+      "الجار قبل الدار.",
+      "من راقب الناس مات همّاً.",
+      "من شبّ على شيء شاب عليه.",
+      "ربّ أخ لم تلده أمك.",
+      "عثرة القدم ولا عثرة اللسان.",
+      "من عاش بوجهين مات لا وجه له.",
+      "العلم نور والجهل ظلام.",
+      "الصمت حكمة ومنطق قليل.",
+      "رحم الله امرأً عرف قدر نفسه.",
+      "الصحة تاج على رؤوس الأصحاء.",
+      "البحر الهادئ لا يصنع بحّاراً ماهراً.",
+      "من لا يَرحم لا يُرحم.",
+      "الدنيا ساعة فاجعلها طاعة.",
+      "التوفيق من الله، والسعي من العبد.",
+      "الابتسامة لغة لا تحتاج إلى ترجمة.",
+      "الكذب داء، والصدق دواء."
+    ];
 
     function startCountdown() {
       const hours = Math.max(0, parseInt(document.getElementById('hoursInput').value) || 0);
@@ -70,21 +107,22 @@
       countdown = (hours * 3600) + (minutes * 60);
       if (countdown <= 0) return;
 
-      // إنشاء AudioContext مرة واحدة بعد إيماءة المستخدم (للسماح بالتشغيل لاحقاً)
       if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
         const AC = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AC();
       }
 
-      // تغيير الخلفية
       document.body.style.background = document.getElementById('bgColor').value;
 
-      // إخفاء الإعدادات وإظهار العداد
       document.getElementById('setup').style.display = "none";
       document.getElementById('time').style.display = "block";
       document.getElementById('hint').style.display = "block";
 
-      // ملء الشاشة (داخل حدث زر لتسمح به المتصفحات)
+      // اختر حكمة عشوائية
+      const q = quotes[Math.floor(Math.random() * quotes.length)];
+      document.getElementById('quote').textContent = q;
+      document.getElementById('quote').style.display = "block";
+
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(()=>{});
       }
@@ -109,45 +147,32 @@
       } else {
         clearInterval(interval);
         document.getElementById('time').textContent = "00:00:00";
-        ringAlarm(); // 🔔 شغّل الجرس عند الانتهاء
+        ringAlarm();
       }
     }
 
-    // 🔔 تنبيه صوتي بدون ملفات خارجية (3 صفارات قصيرة)
     function ringAlarm() {
-      // اهتزاز للموبايل إن كان مدعوم
       if (navigator.vibrate) navigator.vibrate([200, 120, 200]);
 
-      if (!audioCtx) return; // متصفح لا يدعم/لم يُنشأ
+      if (!audioCtx) return;
       if (audioCtx.state === 'suspended') audioCtx.resume();
 
       const now = audioCtx.currentTime;
-
-      // وظيفة توليد نغمة قصيرة
       const beep = (freq, start, dur) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        // هجوم سريع ثم خفض تدريجي للصوت
+        osc.type = 'sine'; osc.frequency.value = freq;
+        osc.connect(gain); gain.connect(audioCtx.destination);
         gain.gain.setValueAtTime(0.0001, now + start);
         gain.gain.exponentialRampToValueAtTime(0.35, now + start + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
-
-        osc.start(now + start);
-        osc.stop(now + start + dur);
+        osc.start(now + start); osc.stop(now + start + dur);
       };
-
-      // ثلاث صفارات: تردد 880Hz
       beep(880, 0.00, 0.28);
       beep(880, 0.45, 0.28);
       beep(880, 0.90, 0.45);
     }
 
-    // الخروج فقط عند الضغط على المسطرة
     document.addEventListener('keydown', function(e) {
       if (e.code === "Space") {
         if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
